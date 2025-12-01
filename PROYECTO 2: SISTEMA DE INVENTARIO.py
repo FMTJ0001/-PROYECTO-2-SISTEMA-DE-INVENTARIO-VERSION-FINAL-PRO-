@@ -1,264 +1,362 @@
-import os # Necesario para imprimir y limpiar pantalla
+# ==============================================================================
+# PROYECTO FINAL: SISTEMA DE INVENTARIO
+# MATERIA1
+# : PROGRAMACIÓN I
+# PROFESOR: LUIS JOSE RAMON
+# GRUPO # 2: TEAM FRUTA
+# TIENDA: LA FRUTA MARKET
+#
+# NOTAS:
+# Decidimos usar una lista de diccionarios porque es la forma más fácil
+# de mantener juntos el nombre, precio y cantidad de cada cosa.
+# Usamos archivos de texto (.txt) para que el inventario no se # borre 
+# cuando cerramos el programa.
+# Le pusimos la opción de cancelar con la letra 'F' en todos lados por si
+# el usuario entra a una opción por error.
+# Agregamos el cálculo del ITBIS automático y un historial de ventas.
+# ==============================================================================
 
-# --- CLASE DE COLORES ---
-class Color:
-    RESET = "\033[0m"
-    ROJO = "\033[91m"
-    VERDE = "\033[92m"
-    AMARILLO = "\033[93m"
-    AZUL = "\033[96m" 
-    NEGRITA = "\033[1m"
-
-# 1. Lista principal (Global)
+# Esta es nuestra lista principal donde guardamos todos los productos
 inventario = []
 
-def mostrar_menu():
-    print(f"\n{Color.AZUL}========================================{Color.RESET}")
-    print(f"{Color.NEGRITA}      GESTION DE INVENTARIO TIENDA      {Color.RESET}")
-    print(f"{Color.AZUL}========================================{Color.RESET}")
-    print("1. Agregar un producto nuevo")
-    print("2. Actualizar existencias")
-    print("3. Consultar producto")
-    print("4. Eliminar producto")
-    print("5. Imprimir Reportes (Pantalla)")
-    print(f"6. Guardar en Archivo {Color.AMARILLO}(Backup){Color.RESET}")
-    print(f"7. {Color.NEGRITA}Mandar a Impresora (Físico){Color.RESET}") # <--- NUEVO
-    print(f"8. Ver Inventario Ordenado {Color.AMARILLO}(Opcional){Color.RESET}")
-    print(f"9. {Color.ROJO}Salir{Color.RESET}")
-    print(f"{Color.AZUL}========================================{Color.RESET}")
+# --- 1. PARTE DE LOS ARCHIVOS (Para que no se pierdan los datos) ---
 
-# --- FUNCION AUXILIAR PARA ORDENAR ---
-def obtener_cantidad(producto):
-    return producto["cantidad"]
-
-def ver_inventario_ordenado():
-    print(f"\n{Color.AZUL}--- INVENTARIO ORDENADO (MAYOR A MENOR) ---{Color.RESET}")
-    if not inventario:
-        print(f"{Color.AMARILLO}Inventario vacio.{Color.RESET}")
-        return
-
-    lista_ordenada = sorted(inventario, key=obtener_cantidad, reverse=True)
-
-    for p in lista_ordenada:
-        print(f"Nombre: {Color.NEGRITA}{p['nombre']}{Color.RESET} | Stock: {p['cantidad']} | Precio: ${p['precio']}")
-
-def agregar_producto():
-    print(f"\n{Color.AZUL}--- AGREGAR PRODUCTO ---{Color.RESET}")
-    nombre = input("Ingresa el nombre del producto: ")
-    
-    if nombre == "":
-        print(f"{Color.ROJO}ERROR: El nombre no puede estar vacio.{Color.RESET}")
-        return 
-
-    for producto in inventario:
-        if producto["nombre"] == nombre:
-            print(f"{Color.ROJO}ERROR: Ese producto ya existe. Usa la opcion 2.{Color.RESET}")
-            return
-
+def guardar_cambios():
+    # Esta función guarda lo que tenemos en memoria en el archivo de texto
     try:
-        precio = float(input("Ingresa el precio del producto: "))
-        if precio < 0:
-            print(f"{Color.ROJO}ERROR: El precio no puede ser negativo.{Color.RESET}")
-            return
-    except ValueError:
-        print(f"{Color.ROJO}ERROR: Debes escribir un numero valido.{Color.RESET}")
-        return
+        archivo = open("datos_market.txt", "w")
+        for p in inventario:
+            # Guardamos separado por comas y con dos decimales en el precio
+            archivo.write(f"{p['nombre']},{p['cantidad']},{p['precio']:.2f}\n")
+        archivo.close()
+    except:
+        print("Tuvimos un problema al intentar guardar el archivo.")
 
+def cargar_inicio():
+    # Esta función lee el archivo cuando abrimos el programa
     try:
-        cantidad = int(input("Ingresa la cantidad inicial: "))
-        if cantidad < 0:
-            print(f"{Color.ROJO}ERROR: La cantidad no puede ser negativa.{Color.RESET}")
-            return
-    except ValueError:
-        print(f"{Color.ROJO}ERROR: La cantidad debe ser un numero entero.{Color.RESET}")
-        return
-
-    nuevo_producto = {
-        "nombre": nombre,
-        "precio": precio,
-        "cantidad": cantidad
-    }
-    
-    inventario.append(nuevo_producto)
-    print(f"{Color.VERDE}¡Producto '{nombre}' agregado exitosamente!{Color.RESET}")
-
-def actualizar_cantidad():
-    print(f"\n{Color.AZUL}--- ACTUALIZAR CANTIDAD ---{Color.RESET}")
-    nombre_buscar = input("Nombre del producto a actualizar: ")
-    
-    encontrado = False
-    for prod in inventario:
-        if prod["nombre"] == nombre_buscar:
-            encontrado = True
-            print(f"Producto encontrado. Cantidad actual: {prod['cantidad']}")
+        archivo = open("datos_market.txt", "r")
+        for linea in archivo:
             try:
-                nueva_cant = int(input("Ingresa la NUEVA cantidad total: "))
-                if nueva_cant >= 0:
-                    prod["cantidad"] = nueva_cant
-                    print(f"{Color.VERDE}¡Cantidad actualizada correctamente!{Color.RESET}")
-                else:
-                    print(f"{Color.ROJO}ERROR: No puedes poner cantidad negativa.{Color.RESET}")
-            except ValueError:
-                print(f"{Color.ROJO}ERROR: Ingresa un numero entero.{Color.RESET}")
-            break 
-            
-    if encontrado == False:
-        print(f"{Color.AMARILLO}No se encontro ese producto.{Color.RESET}")
+                # Cortamos la línea donde están las comas
+                datos = linea.strip().split(",")
+                
+                # Verificamos que la línea tenga los 3 datos que necesitamos
+                if len(datos) == 3: 
+                    nuevo_prod = {
+                        "nombre": datos[0], 
+                        "cantidad": int(datos[1]), 
+                        "precio": float(datos[2])
+                    }
+                    inventario.append(nuevo_prod)
+            except:
+                # Si una línea está mala, la saltamos y seguimos con la otra
+                continue
+        archivo.close()
+    except:
+        # Si no existe el archivo (es la primera vez), no hacemos nada
+        pass 
 
-def consultar_producto():
-    print(f"\n{Color.AZUL}--- CONSULTAR PRODUCTO ---{Color.RESET}")
-    nombre_buscar = input("Nombre del producto a buscar: ")
+def registrar_historial(nombre_prod, cant, total_cobrado):
+    # Esto es un extra: guardamos cada venta en un archivo aparte
+    try:
+        # Usamos 'a' (append) para agregar al final sin borrar lo anterior
+        archivo = open("historial_ventas.txt", "a")
+        linea = f"VENTA: Producto: {nombre_prod} | Cant: {cant} | Total: RD${total_cobrado:.2f}\n"
+        archivo.write(linea)
+        archivo.close()
+    except:
+        print("No se pudo guardar la venta en el historial.")
+
+# --- 2. FUNCIONES DEL SISTEMA ---
+
+def agregar_nuevo():
+    print("\n--- AGREGAR PRODUCTO ---")
     
-    encontrado = False
-    for prod in inventario:
-        if prod["nombre"] == nombre_buscar:
-            print("-------------------------")
-            print(f"Nombre: {Color.NEGRITA}{prod['nombre']}{Color.RESET}")
-            print(f"Precio: ${prod['precio']}")
-            print(f"Cantidad: {prod['cantidad']}")
-            print("-------------------------")
-            encontrado = True
-            break
+    # Validamos el nombre (Bucle para que no lo dejen vacío)
+    while True:
+        # Quitamos las comas para que no se dañe el archivo CSV
+        nombre = input("Nombre del producto (o 'F' para cancelar): ").strip().capitalize().replace(",", "")
+        
+        # Opción de escape
+        if nombre.upper() == "F": 
+            return
+
+        if nombre == "":
+            print("El dato que acabas de colocar no es válido. El nombre es obligatorio.")
+            continue
+        
+        # Revisamos si ya existe para no tener duplicados
+        existe = False
+        for p in inventario:
+            if p["nombre"] == nombre:
+                print("El dato que acabas de colocar no es válido. Ese producto ya existe.")
+                existe = True
+                break
+        
+        if not existe:
+            break 
+
+    # Validación de Cantidad (Bucle de insistencia)
+    while True:
+        entrada = input("Cantidad inicial (o 'F' para cancelar): ")
+        if entrada.upper() == "F": return 
+
+        try:
+            cant = int(entrada)
+            if cant >= 0: break
+            print("El dato que acabas de colocar no es válido. No use negativos.")
+        except:
+            print("Debes ingresar solo números enteros.")
+
+    # Validación de Precio
+    while True:
+        entrada = input("Precio RD$ (o 'F' para cancelar): ")
+        if entrada.upper() == "F": return 
+
+        try:
+            precio = float(entrada)
+            if precio >= 0: break
+            print("El dato que acabas de colocar no es válido. El precio debe ser positivo.")
+        except:
+            print("Debes ingresar solo números válidos.")
             
-    if encontrado == False:
-        print(f"{Color.AMARILLO}Producto no encontrado.{Color.RESET}")
+    # Si todo está bien, lo agregamos y guardamos
+    inventario.append({"nombre": nombre, "cantidad": cant, "precio": precio})
+    print(f"¡Listo! El producto '{nombre}' fue agregado correctamente.")
+    guardar_cambios()
+
+def actualizar_stock():
+    print("\n--- ACTUALIZAR EXISTENCIAS ---")
+    
+    # Bucle para buscar (así no te saca si escribes mal el nombre)
+    while True:
+        busqueda = input("Nombre del producto (o 'F' para cancelar): ").strip().capitalize()
+        if busqueda.upper() == "F": return
+
+        producto_encontrado = None
+        # Buscamos el producto en la lista
+        for p in inventario:
+            if p["nombre"] == busqueda:
+                producto_encontrado = p
+                break
+        
+        if producto_encontrado:
+            print(f"Producto: {producto_encontrado['nombre']} | Cantidad: {producto_encontrado['cantidad']} | Precio: RD${producto_encontrado['precio']:.2f}")
+            print("(Si no quieres cambiar el dato, solo dale a ENTER)")
+            
+            # Actualizar Cantidad
+            entrada_cant = input("Nueva Cantidad (o 'F' para cancelar): ")
+            if entrada_cant.upper() == "F": return 
+
+            if entrada_cant != "":
+                try: 
+                    cantidad_temp = int(entrada_cant)
+                    if cantidad_temp >= 0:
+                        producto_encontrado["cantidad"] = cantidad_temp
+                    else:
+                        print("No se permiten negativos. Cantidad no actualizada.")
+                except: 
+                    print("Debes ingresar solo números. Cantidad no actualizada.")
+            
+            # Actualizar Precio
+            entrada_precio = input("Nuevo Precio RD$ (o 'F' para cancelar): ")
+            if entrada_precio.upper() == "F": return
+
+            if entrada_precio != "":
+                try: 
+                    precio_temp = float(entrada_precio)
+                    if precio_temp >= 0:
+                        producto_encontrado["precio"] = precio_temp
+                    else:
+                        print("No se permiten negativos. Precio no actualizado.")
+                except: 
+                    print("Debes ingresar solo números. Precio no actualizado.")
+            
+            guardar_cambios()
+            print("Datos actualizados correctamente.")
+            return # Salimos al menú
+        else:
+            print("No encontramos ese producto. Intenta de nuevo.")
 
 def eliminar_producto():
-    print(f"\n{Color.AZUL}--- ELIMINAR PRODUCTO ---{Color.RESET}")
-    nombre_borrar = input("Nombre del producto a eliminar: ")
+    print("\n--- ELIMINAR PRODUCTO ---")
     
-    indice_a_borrar = -1
-    for i in range(len(inventario)):
-        if inventario[i]["nombre"] == nombre_borrar:
-            indice_a_borrar = i
-            break
-            
-    if indice_a_borrar != -1:
-        inventario.pop(indice_a_borrar)
-        print(f"{Color.VERDE}El producto '{nombre_borrar}' fue eliminado.{Color.RESET}")
-    else:
-        print(f"{Color.AMARILLO}No se encontro el producto.{Color.RESET}")
+    while True:
+        nombre = input("Nombre a borrar (o 'F' para cancelar): ").strip().capitalize()
+        if nombre.upper() == "F": return
+        
+        encontrado = False
+        # Usamos una copia de la lista [:] para borrar de forma segura
+        for i in range(len(inventario)):
+            if inventario[i]["nombre"] == nombre:
+                inventario.pop(i) # Lo sacamos de la lista
+                print("Producto eliminado del sistema.")
+                guardar_cambios()
+                return 
+        
+        if not encontrado:
+            print("No encontramos ese nombre. Intenta de nuevo.")
 
-def imprimir_reportes():
-    print(f"\n{Color.AZUL}--- REPORTES EN PANTALLA ---{Color.RESET}")
+def ver_lista_productos():
+    print("\n--- CONSULTAR INVENTARIO ---")
     if len(inventario) == 0:
-        print(f"{Color.AMARILLO}No hay productos registrados.{Color.RESET}")
+        print("El inventario está vacío.")
         return
-
-    print("1) Productos con STOCK BAJO (menos de 5):")
-    hay_bajos = False
-    for prod in inventario:
-        if prod["cantidad"] < 5:
-            print(f" - {Color.ROJO}ALERTA:{Color.RESET} {prod['nombre']} (Quedan: {prod['cantidad']})")
-            hay_bajos = True
-    if hay_bajos == False:
-        print(f" - {Color.VERDE}No hay productos con stock bajo.{Color.RESET}")
-
-    print("\n2) Producto con MAYOR cantidad:")
-    prod_mayor = inventario[0]
-    for prod in inventario:
-        if prod["cantidad"] > prod_mayor["cantidad"]:
-            prod_mayor = prod
-    print(f" - El mayor es: {Color.NEGRITA}{prod_mayor['nombre']}{Color.RESET} ({prod_mayor['cantidad']} u.)")
-
-    print("\n3) Valor TOTAL del inventario:")
-    suma_total = 0
-    for prod in inventario:
-        total_prod = prod["precio"] * prod["cantidad"]
-        suma_total = suma_total + total_prod
-    print(f" - Valor total estimado: ${suma_total}")
-
-def guardar_inventario():
-    print(f"\n{Color.AZUL}--- GUARDANDO ARCHIVO DE TEXTO ---{Color.RESET}")
-    if not inventario:
-        print(f"{Color.AMARILLO}Inventario vacio, nada que guardar.{Color.RESET}")
-        return False # Retornamos False si falló
+        
+    print("1. Ver orden normal (como llegaron)")
+    print("2. Ver ordenado alfabéticamente (A-Z)")
+    opcion = input("Opción (o 'F' para cancelar): ")
+    if opcion.upper() == "F": return
     
+    # Creamos una lista temporal para no desordenar la original
+    lista_temporal = list(inventario)
+    
+    if opcion == "2":
+        # Usamos lambda para ordenar por el nombre
+        lista_temporal.sort(key=lambda x: x["nombre"])
+        
+    print("-" * 50)
+    print("PRODUCTO \t| CANT \t| PRECIO (RD$)")
+    print("-" * 50)
+    for p in lista_temporal:
+        print(f"{p['nombre']} \t| {p['cantidad']} \t| RD${p['precio']:.2f}")
+
+def reporte_bajo_stock():
+    print("\n--- REPORTE STOCK BAJO ---")
     try:
-        nombre_archivo = "inventario.txt"
-        archivo = open(nombre_archivo, "w")
-        archivo.write("REPORTE DE INVENTARIO\n")
-        archivo.write("=====================\n")
+        entrada = input("Avisame si hay menos de (o 'F' para cancelar): ")
+        if entrada.upper() == "F": return
+
+        minimo = int(entrada)
+        encontrado = False
         
         for p in inventario:
-            linea = f"Producto: {p['nombre']} | Precio: {p['precio']} | Stock: {p['cantidad']}\n"
-            archivo.write(linea)
-            
-        archivo.close()
-        print(f"{Color.VERDE}¡Exito! La informacion se guardo en '{nombre_archivo}'.{Color.RESET}")
-        return True # Retornamos True si funcionó
+            if p["cantidad"] < minimo:
+                print(f"ATENCIÓN: {p['nombre']} tiene pocas unidades ({p['cantidad']}).")
+                encontrado = True
+                
+        if not encontrado: 
+            print("Todo bien. No hay productos en alerta.")
     except:
-        print(f"{Color.ROJO}Ocurrio un error al intentar crear el archivo.{Color.RESET}")
-        return False
+        print("Debes ingresar solo números enteros.")
 
-# --- NUEVA FUNCION: IMPRESION FISICA ---
-def imprimir_fisico():
-    print(f"\n{Color.AZUL}--- ENVIANDO A IMPRESORA ---{Color.RESET}")
+def reporte_valor_inventario():
+    print("\n--- VALOR TOTAL ---")
+    total_dinero = 0
+    mayor_stock = -1
+    nombre_mayor = ""
     
-    # 1. Primero guardamos el archivo para tener qué imprimir
-    se_guardo = guardar_inventario()
+    for p in inventario:
+        total_dinero += p["cantidad"] * p["precio"]
+        
+        # Buscamos cuál es el producto que más hay
+        if p["cantidad"] > mayor_stock:
+            mayor_stock = p["cantidad"]
+            nombre_mayor = p["nombre"]
+            
+    print(f"Total invertido en el negocio: RD${total_dinero:,.2f}") 
+    if nombre_mayor != "":
+        print(f"El producto con más stock es: {nombre_mayor}")
+
+def facturar_caja():
+    # Esta es nuestra función extra para simular una venta con ITBIS
+    print("\n--- CAJA REGISTRADORA ---")
     
-    if se_guardo == True:
-        print("Intentando abrir herramienta de impresión...")
-        try:
-            # Truco de Novato: Usamos os.startfile con la opcion "print"
-            # Esto le dice a Windows: "Imprime este archivo de texto"
-            os.startfile("inventario.txt", "print")
-            print(f"{Color.VERDE}¡Comando enviado! Revisa tu impresora.{Color.RESET}")
-        except:
-            print(f"{Color.ROJO}ERROR: Esta funcion solo es compatible con Windows.{Color.RESET}")
-            print("En otros sistemas, abre 'inventario.txt' e imprime manualmente.")
+    # Bucle para no salir si se equivocan de nombre
+    while True:
+        busqueda = input("Producto a cobrar (o 'F' para cancelar): ").strip().capitalize()
+        if busqueda.upper() == "F": return
+        
+        producto_encontrado = None
+        for p in inventario:
+            if p["nombre"] == busqueda:
+                producto_encontrado = p
+                break
+        
+        if producto_encontrado:
+            # Si lo encontramos, procedemos a la venta
+            print(f"Disponible: {producto_encontrado['cantidad']} | Precio: RD${producto_encontrado['precio']:.2f}")
+            
+            while True:
+                entrada = input("¿Cuántos lleva? (o 'F' para cancelar): ")
+                if entrada.upper() == "F": return
+                
+                try:
+                    cantidad_llevar = int(entrada)
+                    
+                    if cantidad_llevar <= 0:
+                        print("El dato que acabas de colocar no es válido (debe ser mayor a 0).")
+                    elif cantidad_llevar > producto_encontrado["cantidad"]:
+                        print(f"El dato que acabas de colocar no es válido. Solo quedan {producto_encontrado['cantidad']}.")
+                    else:
+                        # Hacemos los cálculos del dinero
+                        subtotal = cantidad_llevar * producto_encontrado["precio"]
+                        itbis = subtotal * 0.18 # ITBIS de ley (18%)
+                        total_pagar = subtotal + itbis
+                        
+                        # Restamos del inventario
+                        producto_encontrado["cantidad"] = producto_encontrado["cantidad"] - cantidad_llevar
+                        
+                        # Imprimimos el recibo para el cliente
+                        print("\n" + "="*35)
+                        print("      LA FRUTA MARKET - RECIBO      ")
+                        print("="*35)
+                        print(f"Producto:   {producto_encontrado['nombre']}")
+                        print(f"Cantidad:   {cantidad_llevar}")
+                        print(f"Subtotal:   RD${subtotal:.2f}")
+                        print(f"ITBIS (18%): RD${itbis:.2f}")
+                        print("-" * 35)
+                        print(f"TOTAL:      RD${total_pagar:.2f}")
+                        print("="*35)
+                        print("      Gracias por su compra       ")
+                        
+                        # Guardamos los cambios y registramos en el historial
+                        guardar_cambios()
+                        registrar_historial(producto_encontrado['nombre'], cantidad_llevar, total_pagar)
+                        
+                        # Pausa para ver el ticket
+                        input("\nPresione Enter para continuar...")
+                        return 
+                except:
+                    print("Debes ingresar solo números.")
+        else:
+            print("No encontramos ese producto. Intenta de nuevo.")
 
-# --- BLOQUE PRINCIPAL (MAIN) ---
-
-# 1. LOGIN DE SEGURIDAD
-print(f"\n{Color.VERDE}*{Color.RESET}")
-print(f"{Color.VERDE}* SISTEMA DE INVENTARIO SEGURO *{Color.RESET}")
-print(f"{Color.VERDE}*{Color.RESET}")
-
-intentos = 0
-acceso_concedido = False
-
-while intentos < 3:
-    usuario = input("Usuario: ")
-    clave = input("Contraseña: ")
+# --- MENU PRINCIPAL ---
+def menu_principal():
+    cargar_inicio() # Cargamos los datos al arrancar
     
-    if usuario == "admin" and clave == "1234":
-        print(f"\n{Color.VERDE}>>> ACCESO CONCEDIDO. ¡Bienvenido!{Color.RESET}")
-        acceso_concedido = True
-        break
-    else:
-        intentos = intentos + 1
-        print(f"{Color.ROJO}Datos incorrectos. Intento {intentos} de 3.{Color.RESET}")
+    while True:
+        print("\n" + "="*40)
+        print("      SISTEMA DE INVENTARIO (RD)")
+        print("          LA FRUTA MARKET")
+        print("="*40)
+        print("1. Agregar Mercancía")
+        print("2. Actualizar Producto")
+        print("3. Eliminar Producto")
+        print("4. Consultar Inventario (Ordenar)")
+        print("5. Reporte: Stock Bajo")
+        print("6. Reporte: Valor Total")
+        print("7. Facturar (Caja con ITBIS)") 
+        print("8. Salir")
+        print("-" * 40)
+        
+        op = input("Seleccione una opción: ")
+        
+        if op == "1": agregar_nuevo()
+        elif op == "2": actualizar_stock()
+        elif op == "3": eliminar_producto()
+        elif op == "4": ver_lista_productos()
+        elif op == "5": reporte_bajo_stock()
+        elif op == "6": reporte_valor_inventario()
+        elif op == "7": facturar_caja()
+        elif op == "8": 
+            print("Cerrando sistema... ¡Nos vemos!")
+            break
+        else:
+            print("El dato que acabas de colocar no es válido, intenta de nuevo.")
 
-if acceso_concedido == False:
-    print(f"\n{Color.ROJO}>>> ERROR: Demasiados intentos fallidos. Sistema bloqueado.{Color.RESET}")
-    exit()
-
-# 2. MENU PRINCIPAL
-continuar = True
-while continuar:
-    mostrar_menu()
-    opcion = input("Elige una opcion (1-9): ")
-    
-    if opcion == "1":
-        agregar_producto()
-    elif opcion == "2":
-        actualizar_cantidad()
-    elif opcion == "3":
-        consultar_producto()
-    elif opcion == "4":
-        eliminar_producto()
-    elif opcion == "5":
-        imprimir_reportes()
-    elif opcion == "6":
-        guardar_inventario()
-    elif opcion == "7": # <--- NUEVA OPCION
-        imprimir_fisico()
-    elif opcion == "8":
-        ver_inventario_ordenado()
-    elif opcion == "9":
-        print(f"{Color.AZUL}Saliendo... ¡Adios!{Color.RESET}")
-        continuar = False
-    else:
-        print(f"{Color.ROJO}Opcion no valida.{Color.RESET}")
+# --- INICIO ---
+if __name__ == "__main__":
+    menu_principal()
